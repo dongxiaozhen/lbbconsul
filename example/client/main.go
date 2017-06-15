@@ -41,7 +41,8 @@ func main() {
 		for {
 
 			time.Sleep(3 * time.Second)
-			err := lbbconsul.GConsulClient.DiscoverService(true, foundServer)
+			// err := lbbconsul.GConsulClient.DiscoverService(true, foundServer)
+			err := lbbconsul.GConsulClient.DiscoverServiceV2(foundServer)
 			if err != nil {
 				fmt.Println("discover server err", foundServer)
 				continue
@@ -52,7 +53,12 @@ func main() {
 				continue
 			}
 
-			sendData(services[0])
+			for k, v := range services {
+				sendData(v)
+				fmt.Println("use ", k)
+				break
+			}
+
 		}
 	}()
 	<-exist

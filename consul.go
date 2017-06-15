@@ -167,6 +167,42 @@ func (c *ConsulClient) DiscoverService(healthyOnly bool, foundService string) er
 	return nil
 }
 
+func (c *ConsulClient) DiscoverServiceV2(foundService string) error {
+	services, err := c.Agent().Services()
+	if err != nil {
+		fmt.Println("get Services err", err)
+		return err
+	}
+
+	var sers = make(map[string]*ServiceInfo)
+	for id, ser := range services {
+		if ser.Service == foundService {
+			node := &ServiceInfo{}
+			node.IP = ser.Address
+			node.Port = ser.Port
+			node.ServiceID = id
+			if _, ok := sers[id]; ok {
+				fmt.Println("repeat serviceID ", id)
+				continue
+			} else {
+				sers[id] = node
+			}
+			fmt.Println("DiscoverServiceV2 ", *node)
+		}
+	}
+
+	if sers == nil {
+		fmt.Println("DiscoverService empty")
+		c.Lock()
+		delete(c.Clients, foundService)
+		c.Unlock()
+		return nil
+	}
+	c.Lock()
+	c.Clients[foundService] = sers
+	c.Unlock()
+	return nil
+}
 func (c *ConsulClient) GetAllService(serviceName string) (map[string]*ServiceInfo, bool) {
 	services, ok := c.Clients[serviceName]
 	return services, ok
