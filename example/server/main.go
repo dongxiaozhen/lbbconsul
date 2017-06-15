@@ -25,6 +25,7 @@ func main() {
 	flag.Parse()
 	cfg.MInterval = "5s"
 	cfg.MTimeOut = "2s"
+	cfg.DeregisterTime = "20s"
 	cfg.MMethod = "http"
 	exist := make(chan os.Signal, 1)
 	signal.Notify(exist, syscall.SIGTERM)

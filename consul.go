@@ -26,16 +26,17 @@ type (
 var GConsulClient = &ConsulClient{}
 
 type ConsulConfig struct {
-	Ip         string   // server ip
-	Port       int      // server port
-	ServerId   string   // server id, must unique
-	ServerName string   // server name,used to functional classification
-	MAddr      string   // monitor addr
-	MInterval  string   // monitor internal
-	MTimeOut   string   // monitor timeout
-	MMethod    string   // monitor method
-	CAddr      string   // consul addr
-	Tags       []string //server desc
+	Ip             string // server ip
+	Port           int    // server port
+	ServerId       string // server id, must unique
+	ServerName     string // server name,used to functional classification
+	MAddr          string // monitor addr
+	MInterval      string // monitor internal
+	MTimeOut       string // monitor timeout
+	MMethod        string // monitor method
+	CAddr          string // consul addr
+	DeregisterTime string
+	Tags           []string //server desc
 }
 
 func (c *ConsulClient) Open(cfg *ConsulConfig) (err error) {
@@ -77,6 +78,7 @@ func (c *ConsulClient) RegistService(cfg *ConsulConfig) error {
 		Check: &api.AgentServiceCheck{
 			Interval: cfg.MInterval,
 			Timeout:  cfg.MTimeOut,
+			DeregisterCriticalServiceAfter: cfg.DeregistTime,
 		},
 	}
 	switch cfg.MMethod {
@@ -118,59 +120,10 @@ func (c *ConsulClient) RegistService(cfg *ConsulConfig) error {
 
 // 服务发现
 // serviceID 要监测的服务名称
-func (c *ConsulClient) DiscoverService(healthyOnly bool, foundService string) error {
-	services, _, err := c.Client.Catalog().Services(&api.QueryOptions{})
-	if err != nil {
-		fmt.Println("DiscoverService Services err", err)
-		return err
-	}
-	var sers = make(map[string]*ServiceInfo)
-	for name := range services {
-		servicesData, _, err := c.Client.Health().Service(name, "", healthyOnly, &api.QueryOptions{})
-		if err != nil {
-			fmt.Println("DiscoverService,Service err", err)
-			return err
-		}
-		for _, entry := range servicesData {
-			if foundService != entry.Service.Service {
-				continue
-			}
-			for _, health := range entry.Checks {
-				if foundService != health.ServiceName {
-					continue
-				}
-
-				node := &ServiceInfo{}
-				node.IP = entry.Service.Address
-				node.Port = entry.Service.Port
-				node.ServiceID = health.ServiceID
-				if _, ok := sers[health.ServiceID]; ok {
-					fmt.Println("repeat serviceID ", health.ServiceID)
-					continue
-				} else {
-					sers[health.ServiceID] = node
-				}
-			}
-		}
-	}
-
-	if sers == nil {
-		fmt.Println("DiscoverService empty")
-		c.Lock()
-		delete(c.Clients, foundService)
-		c.Unlock()
-		return nil
-	}
-	c.Lock()
-	c.Clients[foundService] = sers
-	c.Unlock()
-	return nil
-}
-
-func (c *ConsulClient) DiscoverServiceV2(foundService string) error {
+func (c *ConsulClient) DiscoverService(foundService string) error {
 	services, err := c.Agent().Services()
 	if err != nil {
-		fmt.Println("get Services err", err)
+		fmt.Println("DiscoverService get Services err", err)
 		return err
 	}
 
@@ -182,12 +135,12 @@ func (c *ConsulClient) DiscoverServiceV2(foundService string) error {
 			node.Port = ser.Port
 			node.ServiceID = id
 			if _, ok := sers[id]; ok {
-				fmt.Println("repeat serviceID ", id)
+				fmt.Println("DiscoverService repeat serviceID ", id)
 				continue
 			} else {
 				sers[id] = node
 			}
-			fmt.Println("DiscoverServiceV2 ", *node)
+			fmt.Println("DiscoverService ", *node)
 		}
 	}
 
@@ -203,6 +156,82 @@ func (c *ConsulClient) DiscoverServiceV2(foundService string) error {
 	c.Unlock()
 	return nil
 }
+func (c *ConsulClient) DiscoverServiceV2(foundService string) error {
+	var sers = make(map[string]*ServiceInfo)
+	servicesData, _, err := c.Client.Health().Service(foundService, "", false, &api.QueryOptions{})
+	if err != nil {
+		fmt.Println("DiscoverAliveServiceV2 err", err)
+		return err
+	}
+	for _, entry := range servicesData {
+		if foundService != entry.Service.Service {
+			continue
+		}
+
+		node := &ServiceInfo{}
+		node.IP = entry.Service.Address
+		node.Port = entry.Service.Port
+		node.ServiceID = entry.Service.ID
+		if _, ok := sers[node.ServiceID]; ok {
+			fmt.Println("repeat serviceID ", node.ServiceID)
+			continue
+		} else {
+			fmt.Println("DiscoverServiceV2 ", *node)
+			sers[node.ServiceID] = node
+		}
+	}
+
+	if sers == nil {
+		fmt.Println("DiscoverAliveServiceV2 empty")
+		c.Lock()
+		delete(c.Clients, foundService)
+		c.Unlock()
+		return nil
+	}
+	c.Lock()
+	c.Clients[foundService] = sers
+	c.Unlock()
+	return nil
+}
+
+func (c *ConsulClient) DiscoverAliveService(foundService string) error {
+	var sers = make(map[string]*ServiceInfo)
+	servicesData, _, err := c.Client.Health().Service(foundService, "", true, &api.QueryOptions{})
+	if err != nil {
+		fmt.Println("DiscoverAliveService err", err)
+		return err
+	}
+	for _, entry := range servicesData {
+		if foundService != entry.Service.Service {
+			continue
+		}
+
+		node := &ServiceInfo{}
+		node.IP = entry.Service.Address
+		node.Port = entry.Service.Port
+		node.ServiceID = entry.Service.ID
+		if _, ok := sers[node.ServiceID]; ok {
+			fmt.Println("repeat serviceID ", node.ServiceID)
+			continue
+		} else {
+			fmt.Println("DiscoverAliveService", *node)
+			sers[node.ServiceID] = node
+		}
+	}
+
+	if sers == nil {
+		fmt.Println("DiscoverAliveService empty")
+		c.Lock()
+		delete(c.Clients, foundService)
+		c.Unlock()
+		return nil
+	}
+	c.Lock()
+	c.Clients[foundService] = sers
+	c.Unlock()
+	return nil
+}
+
 func (c *ConsulClient) GetAllService(serviceName string) (map[string]*ServiceInfo, bool) {
 	services, ok := c.Clients[serviceName]
 	return services, ok

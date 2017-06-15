@@ -27,6 +27,7 @@ func main() {
 	flag.Parse()
 	cfg.MInterval = "5s"
 	cfg.MTimeOut = "2s"
+	cfg.DeregisterTime = "20s"
 	cfg.MMethod = "http"
 	exist := make(chan os.Signal, 1)
 	signal.Notify(exist, syscall.SIGTERM)
@@ -41,7 +42,7 @@ func main() {
 		tick := time.NewTicker(2 * time.Second)
 		var oldSer = make(map[string]*lbbconsul.ServiceInfo)
 		for range tick.C {
-			err := lbbconsul.GConsulClient.DiscoverService(true, foundServer)
+			err := lbbconsul.GConsulClient.DiscoverAliveService(foundServer)
 			if err != nil {
 				fmt.Println("discover server err", foundServer)
 				continue
