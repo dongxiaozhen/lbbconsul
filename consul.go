@@ -78,7 +78,7 @@ func (c *ConsulClient) RegistService(cfg *ConsulConfig) error {
 		Check: &api.AgentServiceCheck{
 			Interval: cfg.MInterval,
 			Timeout:  cfg.MTimeOut,
-			DeregisterCriticalServiceAfter: cfg.DeregistTime,
+			DeregisterCriticalServiceAfter: cfg.DeregisterTime,
 		},
 	}
 	switch cfg.MMethod {
