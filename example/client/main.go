@@ -18,12 +18,12 @@ var foundServer string
 
 func main() {
 	flag.StringVar(&cfg.Ip, "ip", "127.0.0.1", "server ip")
-	flag.IntVar(&cfg.Port, "port", 9999, "server port")
+	flag.IntVar(&cfg.Port, "port", 3333, "server port")
 	flag.StringVar(&cfg.ServerId, "sid", "client_id_1", "server id")
 	flag.StringVar(&cfg.ServerName, "sname", "client_id", "server name")
-	flag.StringVar(&cfg.MAddr, "maddr", "127.0.0.1:8888", "monitor addr")
+	flag.StringVar(&cfg.MAddr, "maddr", "127.0.0.1:3331", "monitor addr")
 	flag.StringVar(&cfg.CAddr, "caddr", "127.0.0.1:8500", "consul addr")
-	flag.StringVar(&foundServer, "fdsvr", "serverNode_1", "found server name")
+	flag.StringVar(&foundServer, "fdsvr", "proxy_name", "found server name")
 	flag.Parse()
 	cfg.MInterval = "5s"
 	cfg.MTimeOut = "2s"
