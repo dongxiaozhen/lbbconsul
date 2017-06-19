@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"sync"
 
+	log "github.com/donnie4w/go-logger/logger"
 	"github.com/hashicorp/consul/api"
 )
 
@@ -45,7 +46,7 @@ func (c *ConsulClient) Open(cfg *ConsulConfig) (err error) {
 
 	c.Client, err = api.NewClient(apiConf)
 	if err != nil {
-		fmt.Println("ConsulClient open err", err)
+		log.Warn("ConsulClient open err", err)
 		return err
 	}
 
@@ -61,7 +62,7 @@ func (c *ConsulClient) Close() error {
 
 // check handler ,could overwrites
 func (c *ConsulClient) StatusHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("check status.")
+	log.Info("check status.")
 }
 
 func (c *ConsulClient) Deregister() error {
@@ -104,7 +105,7 @@ func (c *ConsulClient) RegistService(cfg *ConsulConfig) error {
 		service.Check.HTTP = "http://" + cfg.MAddr + "/status"
 		go func() {
 			http.HandleFunc("/status", c.StatusHandler)
-			fmt.Println("start listen...")
+			log.Debug("start listen...")
 			if err := http.ListenAndServe(cfg.MAddr, nil); err != nil {
 				fmt.Println(err)
 				panic(err)
@@ -123,7 +124,7 @@ func (c *ConsulClient) RegistService(cfg *ConsulConfig) error {
 func (c *ConsulClient) DiscoverService(foundService string) error {
 	services, err := c.Agent().Services()
 	if err != nil {
-		fmt.Println("DiscoverService get Services err", err)
+		log.Warn("DiscoverService get Services err", err)
 		return err
 	}
 
@@ -135,17 +136,17 @@ func (c *ConsulClient) DiscoverService(foundService string) error {
 			node.Port = ser.Port
 			node.ServiceID = id
 			if _, ok := sers[id]; ok {
-				fmt.Println("DiscoverService repeat serviceID ", id)
+				log.Warn("DiscoverService repeat serviceID ", id)
 				continue
 			} else {
 				sers[id] = node
 			}
-			fmt.Println("DiscoverService ", *node)
+			log.Debug("DiscoverService ", *node)
 		}
 	}
 
 	if sers == nil {
-		fmt.Println("DiscoverService empty")
+		log.Warn("DiscoverService empty")
 		c.Lock()
 		delete(c.Clients, foundService)
 		c.Unlock()
@@ -160,7 +161,7 @@ func (c *ConsulClient) DiscoverServiceV2(foundService string) error {
 	var sers = make(map[string]*ServiceInfo)
 	servicesData, _, err := c.Client.Health().Service(foundService, "", false, &api.QueryOptions{})
 	if err != nil {
-		fmt.Println("DiscoverAliveServiceV2 err", err)
+		log.Warn("DiscoverAliveServiceV2 err", err)
 		return err
 	}
 	for _, entry := range servicesData {
@@ -173,16 +174,16 @@ func (c *ConsulClient) DiscoverServiceV2(foundService string) error {
 		node.Port = entry.Service.Port
 		node.ServiceID = entry.Service.ID
 		if _, ok := sers[node.ServiceID]; ok {
-			fmt.Println("repeat serviceID ", node.ServiceID)
+			log.Warn("repeat serviceID ", node.ServiceID)
 			continue
 		} else {
-			fmt.Println("DiscoverServiceV2 ", *node)
+			log.Debug("DiscoverServiceV2 ", *node)
 			sers[node.ServiceID] = node
 		}
 	}
 
 	if sers == nil {
-		fmt.Println("DiscoverAliveServiceV2 empty")
+		log.Warn("DiscoverAliveServiceV2 empty")
 		c.Lock()
 		delete(c.Clients, foundService)
 		c.Unlock()
@@ -198,7 +199,7 @@ func (c *ConsulClient) DiscoverAliveService(foundService string) error {
 	var sers = make(map[string]*ServiceInfo)
 	servicesData, _, err := c.Client.Health().Service(foundService, "", true, &api.QueryOptions{})
 	if err != nil {
-		fmt.Println("DiscoverAliveService err", err)
+		log.Warn("DiscoverAliveService err", err)
 		return err
 	}
 	for _, entry := range servicesData {
@@ -211,16 +212,16 @@ func (c *ConsulClient) DiscoverAliveService(foundService string) error {
 		node.Port = entry.Service.Port
 		node.ServiceID = entry.Service.ID
 		if _, ok := sers[node.ServiceID]; ok {
-			fmt.Println("repeat serviceID ", node.ServiceID)
+			log.Warn("repeat serviceID ", node.ServiceID)
 			continue
 		} else {
-			fmt.Println("DiscoverAliveService", *node)
+			log.Debug("DiscoverAliveService", *node)
 			sers[node.ServiceID] = node
 		}
 	}
 
 	if sers == nil {
-		fmt.Println("DiscoverAliveService empty")
+		log.Warn("DiscoverAliveService empty")
 		c.Lock()
 		delete(c.Clients, foundService)
 		c.Unlock()
@@ -246,7 +247,7 @@ func (c *ConsulClient) PutKV(key string, value []byte) error {
 func (c *ConsulClient) GetKV(key string) (value []byte, err error) {
 	kv, _, err := c.KV().Get(key, nil)
 	if err != nil {
-		fmt.Println(err)
+		log.Info(err)
 		return nil, err
 	}
 	return kv.Value, nil
