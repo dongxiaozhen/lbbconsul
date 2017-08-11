@@ -157,6 +157,7 @@ func (c *ConsulClient) DiscoverService(foundService string) error {
 	c.Unlock()
 	return nil
 }
+
 func (c *ConsulClient) DiscoverServiceV2(foundService string) error {
 	var sers = make(map[string]*ServiceInfo)
 	servicesData, _, err := c.Client.Health().Service(foundService, "", false, &api.QueryOptions{})
