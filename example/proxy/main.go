@@ -15,35 +15,24 @@ import (
 	"github.com/dongxiaozhen/lbbconsul"
 )
 
-var cfg lbbconsul.ConsulConfig
 var foundServer string
 
 var clients = []net.Conn{}
 var proxys = []net.Conn{}
 
 func main() {
-	flag.StringVar(&cfg.Ip, "ip", "127.0.0.1", "server ip")
-	flag.IntVar(&cfg.Port, "port", 2222, "server port")
-	flag.StringVar(&cfg.ServerId, "sid", "proxy_id_1", "server id")
-	flag.StringVar(&cfg.ServerName, "sname", "proxy_name", "server name")
-	flag.StringVar(&cfg.MAddr, "maddr", "127.0.0.1:2221", "monitor addr")
-	flag.StringVar(&cfg.CAddr, "caddr", "127.0.0.1:8500", "consul addr")
 	flag.StringVar(&foundServer, "fdsvr", "serverNode_1", "found server name")
 	flag.Parse()
-	cfg.MInterval = "5s"
-	cfg.MTimeOut = "2s"
-	cfg.DeregisterTime = "20s"
-	cfg.MMethod = "http"
 	exist := make(chan os.Signal, 1)
 	signal.Notify(exist, syscall.SIGTERM)
 
-	err := lbbconsul.GConsulClient.Open(&cfg)
+	err := lbbconsul.GConsulClient.Open(&lbbconsul.Ccfg)
 	if err != nil {
 		fmt.Println("open return", err)
 		return
 	}
 
-	ln, err := net.Listen("tcp", fmt.Sprintf("%s:%d", cfg.Ip, cfg.Port))
+	ln, err := net.Listen("tcp", fmt.Sprintf("%s:%d", lbbconsul.Ccfg.Ip, lbbconsul.Ccfg.Port))
 
 	if nil != err {
 		panic("Error: " + err.Error())

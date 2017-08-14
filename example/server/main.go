@@ -13,30 +13,18 @@ import (
 	"github.com/dongxiaozhen/lbbconsul"
 )
 
-var cfg lbbconsul.ConsulConfig
-
 func main() {
-	flag.StringVar(&cfg.Ip, "ip", "127.0.0.1", "server ip")
-	flag.IntVar(&cfg.Port, "port", 9527, "server port")
-	flag.StringVar(&cfg.ServerId, "sid", "serverNode_1_1", "server id")
-	flag.StringVar(&cfg.ServerName, "sname", "serverNode_1", "server name")
-	flag.StringVar(&cfg.MAddr, "maddr", "127.0.0.1:8889", "monitor addr")
-	flag.StringVar(&cfg.CAddr, "caddr", "127.0.0.1:8500", "consul addr")
 	flag.Parse()
-	cfg.MInterval = "5s"
-	cfg.MTimeOut = "2s"
-	cfg.DeregisterTime = "20s"
-	cfg.MMethod = "http"
 	exist := make(chan os.Signal, 1)
 	signal.Notify(exist, syscall.SIGTERM)
 
-	err := lbbconsul.GConsulClient.Open(&cfg)
+	err := lbbconsul.GConsulClient.Open(&lbbconsul.Ccfg)
 	if err != nil {
 		fmt.Println("GConsulClient,open err:", err)
 		return
 	}
 
-	ln, err := net.Listen("tcp", fmt.Sprintf("%s:%d", cfg.Ip, cfg.Port))
+	ln, err := net.Listen("tcp", fmt.Sprintf("%s:%d", lbbconsul.Ccfg.Ip, lbbconsul.Ccfg.Port))
 
 	if nil != err {
 		panic("Error: " + err.Error())
