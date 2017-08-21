@@ -1,6 +1,7 @@
 package lbbconsul
 
 import (
+	"encoding/json"
 	"flag"
 )
 
@@ -17,4 +18,12 @@ func init() {
 	flag.StringVar(&Ccfg.MTimeOut, "mtimeout", "2s", "monitor timeout")
 	flag.StringVar(&Ccfg.DeregisterTime, "deregist", "20s", "DeregisterTime")
 	flag.StringVar(&Ccfg.MMethod, "mmethod", "http", "monitor method")
+}
+
+func GetConsulInfo() []byte {
+	sj, err := json.Marshal(Ccfg)
+	if err != nil {
+		panic(err)
+	}
+	return sj
 }
