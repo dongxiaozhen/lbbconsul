@@ -27,15 +27,15 @@ type (
 var GConsulClient = &ConsulClient{}
 
 type ConsulConfig struct {
-	Ip             string // server ip
-	Port           int    // server port
-	ServerId       string // server id, must unique
-	ServerName     string // server name,used to functional classification
-	MAddr          string // monitor addr
-	MInterval      string // monitor internal
-	MTimeOut       string // monitor timeout
-	MMethod        string // monitor method
-	CAddr          string // consul addr
+	Ip             string `json:"ip"`   // server ip
+	Port           int    `json:"port"` // server port
+	ServerId       string `json:"id"`   // server id, must unique
+	ServerName     string `json:"-"`    // server name,used to functional classification
+	MAddr          string `json:"-"`    // monitor addr
+	MInterval      string `json:"-"`    // monitor internal
+	MTimeOut       string `json:"-"`    // monitor timeout
+	MMethod        string `json:"-"`    // monitor method
+	CAddr          string `json:"-"`    // consul addr
 	DeregisterTime string
 	Tags           []string //server desc
 }
