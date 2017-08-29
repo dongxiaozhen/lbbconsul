@@ -27,3 +27,7 @@ func GetConsulInfo() []byte {
 	}
 	return sj
 }
+
+func GetConsulServerId() string {
+	return Ccfg.ServerId
+}
