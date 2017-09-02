@@ -21,6 +21,7 @@ type (
 		ServiceID string
 		IP        string
 		Port      int
+		Tags      []string
 	}
 )
 
@@ -135,6 +136,7 @@ func (c *ConsulClient) DiscoverService(foundService string) error {
 			node.IP = ser.Address
 			node.Port = ser.Port
 			node.ServiceID = id
+			node.Tags = ser.Tags
 			if _, ok := sers[id]; ok {
 				log.Warn("DiscoverService repeat serviceID ", id)
 				continue
