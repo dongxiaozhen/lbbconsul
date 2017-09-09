@@ -41,18 +41,22 @@ type ConsulConfig struct {
 	Tags           []string //server desc
 }
 
+func NewConsulClient() *ConsulClient {
+	c := &ConsulClient{}
+	apiConf.Address = cfg.CAddr
+	c.Clients = make(map[string]map[string]*ServiceInfo)
+	c.ServiceID = cfg.ServerId
+	return c
+}
+
 func (c *ConsulClient) Open(cfg *ConsulConfig) (err error) {
 	apiConf := api.DefaultConfig()
-	apiConf.Address = cfg.CAddr
-
 	c.Client, err = api.NewClient(apiConf)
 	if err != nil {
 		log.Warn("ConsulClient open err", err)
 		return err
 	}
 
-	c.Clients = make(map[string]map[string]*ServiceInfo)
-	c.ServiceID = cfg.ServerId
 	err = c.RegistService(cfg)
 	return err
 }
@@ -69,8 +73,10 @@ func (c *ConsulClient) StatusHandler(w http.ResponseWriter, r *http.Request) {
 func (c *ConsulClient) Deregister() error {
 	return c.Agent().ServiceDeregister(c.ServiceID)
 }
-
 func (c *ConsulClient) RegistService(cfg *ConsulConfig) error {
+}
+
+func (c *ConsulClient) registService(cfg *ConsulConfig) error {
 	service := &api.AgentServiceRegistration{
 		ID:      cfg.ServerId,
 		Name:    cfg.ServerName,
@@ -162,7 +168,7 @@ func (c *ConsulClient) DiscoverService(foundService string) error {
 
 func (c *ConsulClient) DiscoverServiceV2(foundService string) error {
 	var sers = make(map[string]*ServiceInfo)
-	servicesData, _, err := c.Client.Health().Service(foundService, "", false, &api.QueryOptions{})
+	servicesData, _, err := c.Health().Service(foundService, "", false, &api.QueryOptions{})
 	if err != nil {
 		log.Warn("DiscoverAliveServiceV2 err", err)
 		return err
@@ -200,7 +206,7 @@ func (c *ConsulClient) DiscoverServiceV2(foundService string) error {
 
 func (c *ConsulClient) DiscoverAliveService(foundService string) error {
 	var sers = make(map[string]*ServiceInfo)
-	servicesData, _, err := c.Client.Health().Service(foundService, "", true, &api.QueryOptions{})
+	servicesData, _, err := c.Health().Service(foundService, "", true, &api.QueryOptions{})
 	if err != nil {
 		log.Warn("DiscoverAliveService err", err)
 		return err
@@ -234,6 +240,24 @@ func (c *ConsulClient) DiscoverAliveService(foundService string) error {
 	c.Clients[foundService] = sers
 	c.Unlock()
 	return nil
+}
+
+func (c *ConsulClient) CheckService(serviceName, serviceId string) (alive bool, err error) {
+	healthCheck, _, err := c.Health().Checks(serviceName, nil)
+	if err != nil {
+		log.Warn("heal check err ", err)
+		return
+	}
+
+	for i := range healthCheck {
+		if healthCheck[i].ServiceID == serviceId && healthCheck[i].ServiceName == serviceName {
+			if healthCheck[i].Status == api.HealthPassing {
+				alive = true
+				return
+			}
+		}
+	}
+	return
 }
 
 func (c *ConsulClient) GetAllService(serviceName string) (map[string]*ServiceInfo, bool) {
