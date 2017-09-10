@@ -13,6 +13,7 @@ import (
 type (
 	ConsulClient struct {
 		*api.Client
+		service   *api.AgentServiceRegistration
 		ServiceID string
 		Clients   map[string]map[string]*ServiceInfo
 		sync.RWMutex
@@ -25,7 +26,7 @@ type (
 	}
 )
 
-var GConsulClient = &ConsulClient{}
+var GConsulClient = NewConsulClient()
 
 type ConsulConfig struct {
 	Ip             string `json:"ip"`   // server ip
@@ -43,22 +44,25 @@ type ConsulConfig struct {
 
 func NewConsulClient() *ConsulClient {
 	c := &ConsulClient{}
-	apiConf.Address = cfg.CAddr
 	c.Clients = make(map[string]map[string]*ServiceInfo)
-	c.ServiceID = cfg.ServerId
 	return c
 }
 
 func (c *ConsulClient) Open(cfg *ConsulConfig) (err error) {
 	apiConf := api.DefaultConfig()
+	apiConf.Address = cfg.CAddr
+	c.ServiceID = cfg.ServerId
 	c.Client, err = api.NewClient(apiConf)
 	if err != nil {
 		log.Warn("ConsulClient open err", err)
 		return err
 	}
 
-	err = c.RegistService(cfg)
-	return err
+	err = c.registService(cfg)
+	if err != nil {
+		return err
+	}
+	return c.RegistService()
 }
 
 func (c *ConsulClient) Close() error {
@@ -73,11 +77,12 @@ func (c *ConsulClient) StatusHandler(w http.ResponseWriter, r *http.Request) {
 func (c *ConsulClient) Deregister() error {
 	return c.Agent().ServiceDeregister(c.ServiceID)
 }
-func (c *ConsulClient) RegistService(cfg *ConsulConfig) error {
+func (c *ConsulClient) RegistService() error {
+	return c.Agent().ServiceRegister(c.service)
 }
 
 func (c *ConsulClient) registService(cfg *ConsulConfig) error {
-	service := &api.AgentServiceRegistration{
+	c.service = &api.AgentServiceRegistration{
 		ID:      cfg.ServerId,
 		Name:    cfg.ServerName,
 		Port:    cfg.Port,
@@ -91,7 +96,7 @@ func (c *ConsulClient) registService(cfg *ConsulConfig) error {
 	}
 	switch cfg.MMethod {
 	case "tcp":
-		service.Check.TCP = cfg.MAddr
+		c.service.Check.TCP = cfg.MAddr
 		/* go func() {
 			listen, err := net.Listen("tcp", cfg.MAddr)
 			if err != nil {
@@ -109,7 +114,7 @@ func (c *ConsulClient) registService(cfg *ConsulConfig) error {
 			}
 		}() */
 	case "http":
-		service.Check.HTTP = "http://" + cfg.MAddr + "/status"
+		c.service.Check.HTTP = "http://" + cfg.MAddr + "/status"
 		go func() {
 			http.HandleFunc("/status", c.StatusHandler)
 			log.Debug("start listen...")
@@ -122,8 +127,7 @@ func (c *ConsulClient) registService(cfg *ConsulConfig) error {
 		return errors.New("This method is not implemented")
 	}
 
-	err := c.Agent().ServiceRegister(service)
-	return err
+	return nil
 }
 
 // 服务发现
