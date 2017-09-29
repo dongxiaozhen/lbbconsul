@@ -23,6 +23,7 @@ type (
 		IP        string
 		Port      int
 		Tags      []string
+		Load      int64
 	}
 )
 
@@ -282,4 +283,18 @@ func (c *ConsulClient) GetKV(key string) (value []byte, err error) {
 		return nil, err
 	}
 	return kv.Value, nil
+}
+
+type ConsulServers []*ServiceInfo
+
+func (c ConsulServers) Len() int {
+	return len(c)
+}
+
+func (c ConsulServers) Less(i, j int) bool {
+	return c[i].Load < c[j].Load
+}
+
+func (c ConsulServers) Swap(i, j int) {
+	c[i], c[j] = c[j], c[i]
 }
